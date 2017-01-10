@@ -1,0 +1,55 @@
+Пример soap
+http://krprtl.bakulev.ru/mostarikov/soap/client.php
+
+Вот клиентская часть, она на php,
+но мы будем использовать библиотеку, написанную на delphi
+
+client.php
+<?php
+try {
+// Передаём описание сервиса клиенту
+     $client = @new SoapClient("PatientData.wsdl",array("trace" =>
+1,"exceptions" => 0));
+} catch (SoapFault $client) {
+     echo $client->faultstring;
+}
+// Обращаемся к функции из описания wsdl
+// Запрашиваем Имя по PatID
+$r = $client->GetPatientFirstName(33355);
+print "<pre>\n";
+print "PatientFirstName: ".$r."\n";
+// текст запроса (для отладки)
+print "Request:\n".htmlspecialchars($client->__getLastRequest()) ."\n";
+// текст ответа (для отладки)
+print "Response:\n".htmlspecialchars($client->__getLastResponse())."\n";
+print "</pre>";
+?>
+
+В серверной части реализуем функции, указанные в описании
+server.php
+Здесь нет выборки из Инфоблока, массив уже задан
+<?php
+// Отключаем кеширование на время теста
+ini_set("soap.wsdl_cache_enabled", "0");
+
+class PatientService {
+   private $PatientData = array("FirstName" => "FN",
+                                "SecondName" => "SN",
+                                "LastName" => "LN");
+
+   function GetPatientFirstName($PatID) {
+     if (isset($this->PatientData["FirstName"])) {
+       return $this->PatientData["FirstName"];
+     } else {
+       throw new SoapFault("Server","Unknown PatID $PatID");
+     }
+   }
+}
+
+$server = new SoapServer("PatientData.wsdl");
+$server->setClass("PatientService");
+$server->handle();
+?>
+
+И самое главное написание wsdl описания
+PatientData.wsdl
